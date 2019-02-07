@@ -15,15 +15,18 @@ wfn = wfn[['first name', 'last name']]
 
 fn = pd.concat([bfn, hfn, wfn], ignore_index=True)
 
-#####################
+########################
 # Find special characters
 def siftSpecial(s):
     '''
+    In: string
+    out: set of non-latin alphabet characters
+
     Example
     -------
 
     >>> siftSpecial("aba-sos / barn '")
-    ['-', '/', "'"]
+    {'-', '/', "'"}
 
     '''
     s = s.lower()
@@ -33,8 +36,22 @@ def siftSpecial(s):
     a,b = m.span() # span of first match
 
     if b-a != len(s): # if first match is not whole string
-        return [ c for c in re.split(regulars, s) if c != '']
+        return set( ( c for c in re.split(regulars, s) if c != '') )
     
+all_strings = iter(fn.apply(lambda row: row['first name'] + row['last name'], axis=1))
+
+delims = set()
+
+for s in all_strings:
+    deli = siftSpecial(s)
+    if deli is not None:
+        delims.update(deli)
+
+delims = list(delims)
+
+    
+
+
 
 def tokenizeNames(row):
 
