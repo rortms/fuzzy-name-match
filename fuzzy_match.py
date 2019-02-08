@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 
-from itertools import chain
 import re
 
 # Read files
@@ -36,28 +35,30 @@ def siftSpecial(s):
     a,b = m.span() # span of first match
 
     if b-a != len(s): # if first match is not whole string
-        return set( ( c for c in re.split(regulars, s) if c != '') )
+        # hyphen, -, must be escaped otherwise re interprets as range, e.g., [a-z]        
+        return set( ( c if c != '-' else '\-' for c in re.split(regulars, s) ) )
+
     
 all_strings = iter(fn.apply(lambda row: row['first name'] + row['last name'], axis=1))
 
 delims = set()
 
+## Sifting ##
 for s in all_strings:
     deli = siftSpecial(s)
     if deli is not None:
         delims.update(deli)
 
-delims = list(delims)
-
-    
-
+delims = '[' + "".join(list(delims)) + ' ]' 
+print(delims)
+#############
 
 
 def tokenizeNames(row):
 
     results = re.split(delims, row['first name'].lower().strip())
     results += re.split(delims, row['last name'].lower().strip())
-
+    return results
     # return df.apply(lambda row:
     #                 ' '.join(row['first name'].split()).lower() + \
     #                 ' ' + \
@@ -101,10 +102,14 @@ def angle(u,v):
     return u.dot(v) / np.sqrt(u.dot(u) * v.dot(v))
 
 
-# Fix Name Spacing assure lowercase
-bfn_v = bfn.apply(makeNameStrings, axis=1)
-hfn_v = hfn.apply(makeNameStrings, axis=1)
-wfn_v = wfn.apply(makeNameStrings, axis=1)
+bfn_v = bfn.apply(tokenizeNames, axis=1)
+hfn_v = hfn.apply(tokenizeNames, axis=1)
+wfn_v = wfn.apply(tokenizeNames, axis=1)
+
+# # Fix Name Spacing assure lowercase
+# bfn_v = bfn.apply(makeNameStrings, axis=1)
+# hfn_v = hfn.apply(makeNameStrings, axis=1)
+# wfn_v = wfn.apply(makeNameStrings, axis=1)
 
 # Explore, long and rare pattern names
 print()
