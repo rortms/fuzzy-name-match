@@ -35,10 +35,10 @@ def siftSpecial(s):
     a,b = m.span() # span of first match
 
     if b-a != len(s): # if first match is not whole string
-        # hyphen, -, must be escaped otherwise re interprets as range, e.g., [a-z]        
+        # hyphen, -, must be escaped otherwise re interprets as range, e.g., [a-z]
         return set( ( c if c != '-' else '\-' for c in re.split(regulars, s) ) )
 
-    
+
 all_strings = iter(fn.apply(lambda row: row['first name'] + row['last name'], axis=1))
 
 delims = set()
@@ -49,115 +49,53 @@ for s in all_strings:
     if deli is not None:
         delims.update(deli)
 
-delims = '[' + "".join(list(delims)) + ' ]' 
+delims = '[' + "".join(list(delims)) + ' ]'
 print(delims)
 #############
 
 
-def tokenizeNames(row):
+def tokenizeName(row):
 
     results = re.split(delims, row['first name'].lower().strip())
     results += re.split(delims, row['last name'].lower().strip())
     return results
-    # return df.apply(lambda row:
-    #                 ' '.join(row['first name'].split()).lower() + \
-    #                 ' ' + \
-    #                 row['last name'].split()[0].lower(), axis=1)
+ 
 
-def name2Vector(s, length):
-    # chars, " ", "-", "/", "'" correspond to indices 0,1,2,3
-    # the remaining 26 are alphabet letters
-    char2int = { chr(i) : i - 93 for i in range(97, 97 + 26) }
-    char2int[' '] = 0
-    char2int['-'] = 1
-    char2int['/'] = 2
-    char2int["'"] = 3
+def name2Vector(tokens):
+
+    # Remove possible empty whitespace tokens
+    tokens = [ tok for tok in tokens if tok.strip() != '']
+    
+    # If name composed of more than 4 pieces, just keep
+    # first name, middle, possible last 2 names
+    if len(tokens) > 4: 
+        tokens = [ tokens[0], tokens[1], tokens[-2], tokens[-1] ]
+
+
+    char2int = { chr(i) : i - 97 for i in range(97, 97 + 26) }
+
 
     alphabet_size = len(char2int)
-    result = np.zeros(length*alphabet_size)
+    cutoff = 6  # Only first 6 charactes of each name will be encoded
+    result = np.zeros(4*cutoff*alphabet_size)
     
-    for i,c in enumerate(s):
-        result[ alphabet_size*i + char2int[c] ] = 1
+    for tok in tokens:
+        for i,c in enumerate(tok):
+            
+            # First letter of each name token will have more weight
+            weight = 1
+            if i ==0:
+                weight = 3
+            
+            result[ alphabet_size*i + char2int[c] ] = weight
         
     return result
 
-def vector2Name(v):
-    
-    int2char = { i - 93 : chr(i) for i in range(97, 97 + 26) }
-    int2char[0] = " "
-    int2char[1] = "-"
-    int2char[2] = "/"
-    int2char[3] = "'"
-
-    alphabet_size = len(int2char)
-    
-    result = ""
-    for i in range(len(v)):
-        if v[i] != 0:
-            result += int2char[i % alphabet_size]
-    return result
-    
+#
 def angle(u,v):
 
     return u.dot(v) / np.sqrt(u.dot(u) * v.dot(v))
 
 
-bfn_v = bfn.apply(tokenizeNames, axis=1)
-hfn_v = hfn.apply(tokenizeNames, axis=1)
-wfn_v = wfn.apply(tokenizeNames, axis=1)
 
-# # Fix Name Spacing assure lowercase
-# bfn_v = bfn.apply(makeNameStrings, axis=1)
-# hfn_v = hfn.apply(makeNameStrings, axis=1)
-# wfn_v = wfn.apply(makeNameStrings, axis=1)
-
-# Explore, long and rare pattern names
-print()
-print(hfn_v.iloc[hfn_v.apply(len).nlargest().index])
-print('-----------')
-print(bfn_v.iloc[bfn_v.apply(len).nlargest().index])
-print('-----------')
-print(wfn_v.iloc[wfn_v.apply(len).nlargest().index])
-print('-----------')
-
-# # Fix Name Spacing assure lowercase
-# bfn = makeNameStrings(bfn)
-# hfn = makeNameStrings(hfn)
-# wfn = makeNameStrings(wfn)
-
-
-# # Consolidate/Vectorize
-# fnA = pd.concat([bfn,hfn], ignore_index=True)
-# fnB = wfn
-# tn = fnB[2] # test name (antoinette abidin)
-# fnB = pd.concat([fnB,
-#            pd.Series(['a abidin',
-#                       'antoinette a',
-#                       'antoinette williams',
-#                       'a williams'])], ignore_index=True)
-
-# # Find max length
-# mx = pd.concat([fnA,fnB], ignore_index=True).apply(len).max()
-
-
-# # print(tn)
-# # tv = name2Vector(tn,mx)
-# # print(vector2Name(tv))
-
-# def compare(a,b):
-
-#     return angle(name2Vector(a,mx),
-#                  name2Vector(b,mx))
-#     # if a != b:
-#     #     return angle(name2Vector(a,mx),
-#     #                  name2Vector(b,mx))
-#     # else:
-#     #     return -10000
-    
-# closest = fnA.apply(lambda x: compare(x,tn)).nlargest()
-
-# print(fnA[closest.index])
-# # print( compare(fnB[closest_idx], tn) )
-# # print(tn)
-# # print(fnB[closest_idx])
 
