@@ -49,22 +49,29 @@ for s in all_strings:
     if deli is not None:
         delims.update(deli)
 
-delims = '[' + "".join(list(delims)) + ' ]'
+delims = '[' + "".join(list(delims)) + ' ' + '.' + ']'
 print(delims)
 #############
 
 
-def tokenizeName(row):
+def tokenizeName(name, delims):
+    
+    tokens = re.split(delims, name.lower().strip())
 
-    results = re.split(delims, row['first name'].lower().strip())
-    results += re.split(delims, row['last name'].lower().strip())
-    return results
+    # Remove possible empty whitespace tokens or spanish 'de'
+    tokens = [ tok for tok in tokens if tok.strip() != '' and tok != 'de']
+
+    return tokens
+    
  
-
+def tokenizeRow(row):
+    
+    results = tokenizeName(row['first name'], delims)
+    results += tokenizeName(row['last name'], delims)
+    
+    return results    
+    
 def name2Vector(tokens):
-
-    # Remove possible empty whitespace tokens
-    tokens = [ tok for tok in tokens if tok.strip() != '']
     
     # If name composed of more than 4 pieces, just keep
     # first name, middle, possible last 2 names
@@ -79,15 +86,19 @@ def name2Vector(tokens):
     cutoff = 6  # Only first 6 charactes of each name will be encoded
     result = np.zeros(4*cutoff*alphabet_size)
     
-    for tok in tokens:
+    for nth_token, tok in enumerate(tokens):
+
+        # Slight edge to first name
+        weight = 3 if nth_token == 0 else 2
+            
         for i,c in enumerate(tok):
             
             # First letter of each name token will have more weight
-            weight = 1
+            w = 1
             if i ==0:
-                weight = 3
+                w = weight
             
-            result[ alphabet_size*i + char2int[c] ] = weight
+            result[ alphabet_size*i + char2int[c] ] = w
         
     return result
 
@@ -97,5 +108,34 @@ def angle(u,v):
     return u.dot(v) / np.sqrt(u.dot(u) * v.dot(v))
 
 
+#####################
+# Preliminary Testing
+##
+
+long_name_idx = hfn.apply(lambda row: row['first name'] + row['last name'], axis=1).apply(len).idxmax()
+
+long_name = hfn.iloc[long_name_idx]
+long_name = long_name['first name'] + long_name['last name']
+
+## Some test names
+tests = [
+    
+    "R.C.L",
+    long_name,
+]
 
 
+# 
+def simpleTester(source_name):
+    
+    test_v = name2Vector(tokenizeName(source_name, delims))
+    
+    max_idxs = fn.apply(tokenizeRow, axis=1)\
+                 .apply(name2Vector)\
+                 .apply(lambda v: angle(test_v, v)).nlargest().index
+    
+    return fn.iloc[max_idxs]
+
+for t in tests:
+    print(simpleTester(t))
+    print("----------------")
