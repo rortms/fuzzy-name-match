@@ -4,9 +4,9 @@ import pandas as pd
 import re
 
 # Read files
-bfn = pd.read_csv("black_female_names.csv")
-hfn = pd.read_csv("hispanic_female_names.csv")
-wfn = pd.read_csv("white_female_names.csv")
+bfn = pd.read_csv("bf_names.csv")
+hfn = pd.read_csv("hf_names.csv")
+wfn = pd.read_csv("wf_names.csv")
 
 bfn = bfn[['first name', 'last name']]
 hfn = hfn[['first name', 'last name']]
@@ -112,7 +112,11 @@ def angle(u,v):
 # Preliminary Testing
 ##
 
-long_name_idx = hfn.apply(lambda row: row['first name'] + row['last name'], axis=1).apply(len).idxmax()
+long_name_idx = hfn.apply(
+    
+    lambda row: row['first name'] + row['last name'], axis=1)\
+                   .apply(len)\
+                   .idxmax()
 
 long_name = hfn.iloc[long_name_idx]
 long_name = long_name['first name'] + long_name['last name']
